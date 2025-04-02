@@ -1,28 +1,36 @@
 ﻿using ECommerce.API.Data;
+using ECommerce.API.DTOs.Requests;
+using ECommerce.API.DTOs.Responses;
 using ECommerce.API.Models;
+using ECommerce.API.Services;
+using Mapster;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace ECommerce.API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class CategoriesController : ControllerBase
+    public class CategoriesController(ICategoryService categoryService) : ControllerBase
     {
-        ApplicationDbContext _context;
+        private readonly ICategoryService _categoryService= categoryService;
+        //this without using the primary constructer
+        //private readonly ICategoryService categoryService;
 
-        public CategoriesController(ApplicationDbContext context)
-        {
-            _context = context;
-        }
+        //public CategoriesController(ICategoryService categoryService)
+        //{
+        //    this._categoryService = categoryService;
+        //}
+        //using the primary constructer
         [HttpGet("")]
-        public IActionResult getAll()
+        public IActionResult GetAll()
         {
             try
             {
-                var categories = _context.Categories.ToList();
-                return Ok(categories);
+                var categories = _categoryService.GetAll();
+                return Ok(categories.Adapt<IEnumerable<CategoryResponse>>());
             }
             catch (Exception ex)
             {
@@ -30,7 +38,7 @@ namespace ECommerce.API.Controllers
             }
         }
         [HttpGet("{id}")]
-        public IActionResult getById([FromRoute]int id)
+        public IActionResult GetById([FromRoute]int id)
         {
             
             try
@@ -39,8 +47,8 @@ namespace ECommerce.API.Controllers
                 {
                     return BadRequest("invalid ID");
                 }
-                var category = _context.Categories.Find(id);
-                return category == null ? NotFound() : Ok(category);
+                var category = _categoryService.Get(c=>c.Id==id);
+                return category == null ? NotFound() : Ok(category.Adapt<CategoryResponse>());
 
             }
             catch (Exception ex)
@@ -50,23 +58,46 @@ namespace ECommerce.API.Controllers
 
         }
         [HttpPost("")]
-        public IActionResult create([FromBody] Category category)
+        public IActionResult Create([FromBody] CategoryRequest category)
         {
-            _context.Categories.Add(category);
-            _context.SaveChanges();
+           var createdCategory = _categoryService.Add(category.Adapt<Category>());
             //return Created($"https://localhost:7262/api/Categories/{category.Id}",category);
             //return Created($"{Request.Scheme}://{Request.Host}/api/Categories/{category.Id}", category);
             //this better
-            return CreatedAtAction(nameof(getById), new {category.Id}, category);
+            return CreatedAtAction(nameof(GetById), new { createdCategory.Id}, createdCategory);
         }
         [HttpDelete("{id}")]
-        public IActionResult deleteById([FromRoute]int id)
+        public IActionResult DeleteById([FromRoute]int id)
         {
-            var category = _context.Categories.Find(id);
-            if (category == null) return NotFound();
-            _context.Categories.Remove(category);
-            _context.SaveChanges();
+            var deletedCategory = _categoryService.Remove(id);
+            if (deletedCategory == false) return NotFound();
             return NoContent();
+        }
+        [HttpPut("{id}")]
+        public IActionResult Update([FromRoute] int id, [FromBody] CategoryRequest category)
+        {
+            try
+            {
+                if (id == 0)
+                {
+                    return BadRequest("Invalid ID");
+                }
+                //var categoryInDb = _context.Categories.Find(id);//track the object
+                var categoryInDb = _categoryService.Edit(id, category.Adapt<Category>());
+                if (!categoryInDb)
+                {
+                    return NotFound();
+                }
+                //two track of the object and response will cause an error so we have to make the find asNoTracking or use async and await 
+
+                return NoContent();
+
+
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
         }
     }
 }

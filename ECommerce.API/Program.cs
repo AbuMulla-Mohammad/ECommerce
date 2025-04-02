@@ -1,5 +1,6 @@
 
 using ECommerce.API.Data;
+using ECommerce.API.Services;
 using Microsoft.EntityFrameworkCore;
 using Scalar.AspNetCore;
 
@@ -19,6 +20,8 @@ namespace ECommerce.API
 
             builder.Services.AddDbContext<ApplicationDbContext>(options =>
                 options.UseSqlServer(builder.Configuration.GetConnectionString("defaultConnection")));
+            builder.Services.AddScoped<ICategoryService, CategoryService>();
+            builder.Services.AddScoped<IBrandService,BrandService>();
             var app = builder.Build();
 
             // Configure the HTTP request pipeline.

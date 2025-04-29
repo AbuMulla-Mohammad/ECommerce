@@ -2,23 +2,26 @@
 using ECommerce.API.DTOs.Requests;
 using ECommerce.API.DTOs.Responses;
 using ECommerce.API.Models;
+using ECommerce.API.Services;
 using Mapster;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using System.Threading.Tasks;
 
 namespace ECommerce.API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class ProductsController(ApplicationDbContext context) : ControllerBase
+    public class ProductsController(IProductService productService) : ControllerBase
     {
-        private readonly ApplicationDbContext _context=context;
+        private readonly IProductService _productService=productService;
+
         [HttpGet("")]
-        public IActionResult GetAll()
+        public IActionResult GetAll([FromQuery] string? query, [FromQuery] int page, [FromQuery] int limit = 10)
         {
             try
             {
-                var products = _context.Products.ToList();
+                var products = _productService.GetAll(query, page,limit);
                 if (products is null)
                 {
                     return NotFound("No products found");
@@ -31,12 +34,12 @@ namespace ECommerce.API.Controllers
             }
         }
         [HttpGet("{id}")]
-        public IActionResult GetById([FromRoute] int id)
+        public async Task<IActionResult> GetById([FromRoute] int id)
         {
             try
             {
                 if (id <= 0) return BadRequest("Invalid product id");
-                var product = _context.Products.Find(id);
+                var product = await _productService.GetOneAsync(p=>p.Id==id);
                 if (product == null) return NotFound("Product not found");
                 return Ok(product.Adapt<ProductResponse>());
             }
@@ -45,28 +48,36 @@ namespace ECommerce.API.Controllers
                 return StatusCode(StatusCodes.Status500InternalServerError, ex.Message);
             }
         }
-        [HttpPost("")]
-        public IActionResult Create([FromForm] ProductRequest productRequest)
+        [HttpPut("{id}")]
+        public async Task<IActionResult> Update([FromRoute] int id, [FromForm] UpdateProductRequest productRequest, CancellationToken cancellationToken)
         {
             try
             {
-                var file = productRequest.MainImage;
-                var product=productRequest.Adapt<Product>();
-                if (file!= null&&file.Length>0)
+                var result=await _productService.EditAsync(id, productRequest, cancellationToken);
+                if(result)
                 {
-                    //create a new name for the file
-                    var newFileName=Guid.NewGuid().ToString()+Path.GetExtension(file.FileName);
-                    var filePath=Path.Combine(Directory.GetCurrentDirectory(),"Images", newFileName);
-                    using(var stream=System.IO.File.Create(filePath))
-                    {
-                        file.CopyTo(stream);
-                    }
-                    product.MainImage = newFileName;
-                    _context.Products.Add(product);
-                    _context.SaveChanges();
-                    return CreatedAtAction(nameof(GetById), new {id=product.Id},product.Adapt<ProductResponse>());
+                    return NoContent();
                 }
-                return BadRequest("Main image is required");
+                return NotFound("Product not found");
+
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, ex.Message);
+            }
+        }
+        [HttpPost("")]
+        public async Task<IActionResult> Create([FromForm] ProductRequest productRequest, CancellationToken cancellationToken)
+        {
+            try
+            {
+                
+                Product? createdProduct = await _productService.AddProductAsync(productRequest, cancellationToken);
+                if (createdProduct is null)
+                {
+                    return BadRequest("Main image is required");
+                }
+                return CreatedAtAction(nameof(GetById), new { id = createdProduct.Id }, createdProduct.Adapt<ProductResponse>());
 
             }
             catch (Exception ex)
@@ -76,20 +87,16 @@ namespace ECommerce.API.Controllers
             
         }
         [HttpDelete("{id}")]
-        public IActionResult Delete([FromRoute] int id)
+        public async Task<IActionResult> Delete([FromRoute] int id, CancellationToken cancellationToken)
         {
             try
             {
                 if(id <= 0) return BadRequest("Invalid product id");
-                var product=_context.Products.Find(id);
-                if (product is null) return NotFound("Product not found");
-                var filePath=Path.Combine(Directory.GetCurrentDirectory(),"Images",product.MainImage);
-                if(System.IO.File.Exists(filePath))
+                var result= await _productService.DeleteProductAsync(id,cancellationToken);
+                if (!result)
                 {
-                    System.IO.File.Delete(filePath);
+                    return NotFound("Product not found");
                 }
-                _context.Products.Remove(product);
-                _context.SaveChanges();
                 return NoContent();
             }
             catch (Exception ex)

@@ -1,52 +1,38 @@
 ﻿using ECommerce.API.Data;
+using ECommerce.API.DTOs.Requests;
 using ECommerce.API.Models;
+using ECommerce.API.Services.IService;
 using Microsoft.EntityFrameworkCore;
 using System.Linq.Expressions;
+using System.Threading.Tasks;
 
 namespace ECommerce.API.Services
 {
-    public class CategoryService : ICategoryService
+    public class CategoryService : Service<Category>,ICategoryService
     {
-        private readonly ApplicationDbContext context;
-        public CategoryService(ApplicationDbContext context) 
+        private readonly ApplicationDbContext _context;
+        public CategoryService(ApplicationDbContext context) :base(context)
         {
-            this.context = context;
+            this._context = context;
         }
-        public Category Add(Category category)
-        {
-            context.Categories.Add(category);
-            context.SaveChanges();
-            return category;
-        }
-
-        public bool Edit(int id, Category category)
+        public async Task<bool> EditAsync(int id, Category category,CancellationToken cancellationToken=default)
         {
             //Category? categoryInDb=context.Categories.Find(id);//track
-            Category? categoryInDb = context.Categories.AsNoTracking().FirstOrDefault(c => c.Id == id);//no track
+            Category? categoryInDb = _context.Categories.Find(id);
             if (categoryInDb == null) return false;
-            category.Id = id;
-            context.Categories.Update(category);
-            context.SaveChanges();
+            categoryInDb.Name= category.Name;
+            categoryInDb.Description= category.Description;
+            await _context.SaveChangesAsync(cancellationToken);
             return true;
         }
-
-        public Category? Get(Expression<Func<Category, bool>> expression)
+        public async Task<bool> UpdateToggleAsync(int id,CancellationToken cancellationToken= default)
         {
-            return context.Categories.FirstOrDefault(expression);
-        }
-
-        public IEnumerable<Category> GetAll()
-        {
-            return context.Categories.ToList();
-        }
-
-        public bool Remove(int id)
-        {
-            Category? categoryInDb = context.Categories.Find(id);
-            if (categoryInDb == null) return false;
-            context.Categories.Remove(categoryInDb);
-            context.SaveChanges();
+            Category? cateogryInDb = _context.Categories.Find(id);
+            if (cateogryInDb == null) return false;
+            cateogryInDb.Status = !cateogryInDb.Status;
+            await _context.SaveChangesAsync(cancellationToken);
             return true;
+            
         }
     }
 }

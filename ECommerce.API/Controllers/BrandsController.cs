@@ -5,6 +5,7 @@ using ECommerce.API.Services;
 using Mapster;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using System.Threading.Tasks;
 
 namespace ECommerce.API.Controllers
 {
@@ -19,18 +20,27 @@ namespace ECommerce.API.Controllers
             this._brandService = brandService;
         }
         [HttpGet]
-        public IActionResult GetAll()
+        public async Task<IActionResult> GetAll()
         {
-            var brands=_brandService.GetAll();
-            return Ok(brands);
+            
+            
+            try
+            {
+                var brands = await _brandService.GetAsync();
+                return Ok(brands.Adapt<IEnumerable<BrandResponse>>());
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
         }
         [HttpGet("{id}")]
-        public IActionResult GetById([FromRoute] int id)
+        public async Task<IActionResult> GetById([FromRoute] int id)
         {
             try
             {
                 if (id <= 0) return BadRequest("Invalid ID");
-                var brand=_brandService.Get(b=>b.Id == id);
+                var brand= await _brandService.GetOneAsync(b=>b.Id == id);
                 if (brand == null) return NotFound();
                 return Ok(brand.Adapt<BrandResponse>());
             }
@@ -40,18 +50,25 @@ namespace ECommerce.API.Controllers
             } 
         }
         [HttpPost("")]
-        public IActionResult Create([FromBody]BrandRequest brand)
+        public async Task<IActionResult> Create([FromBody] BrandRequest brand)
         {
-            var brandToCreate=_brandService.Add(brand.Adapt<Brand>());
-            return CreatedAtAction(nameof(GetById), new { brandToCreate.Id}, brandToCreate);
+            try
+            {
+                var brandToCreate = await _brandService.AddAsync(brand.Adapt<Brand>());
+                return CreatedAtAction(nameof(GetById), new { brandToCreate.Id }, brandToCreate);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, ex.Message);
+            }
         }
         [HttpPut("{id}")]
-        public IActionResult Update([FromRoute] int id, [FromBody] BrandRequest brand)
+        public async Task<IActionResult> Update([FromRoute] int id, [FromBody] BrandRequest brand)
         {
             try
             {
                 if (id == 0) return BadRequest("Invalid ID");
-                var editedBrand = _brandService.Edit(id, brand.Adapt<Brand>());
+                var editedBrand = await _brandService.EditAsync(id, brand.Adapt<Brand>());
                 if (!editedBrand) return NotFound();
                 return NoContent();
             }
@@ -61,12 +78,12 @@ namespace ECommerce.API.Controllers
             }
         }
         [HttpDelete("{id}")]
-        public IActionResult Delete([FromRoute] int id)
+        public async Task<IActionResult> Delete([FromRoute] int id)
         {
             try
             {
                 if (id <= 0) return BadRequest("Invalid ID");
-                var deletedBrand = _brandService.Remove(id);
+                var deletedBrand = await _brandService.RemoveAsync(id);
                 if (!deletedBrand) return NotFound();
                 return NoContent();
             }

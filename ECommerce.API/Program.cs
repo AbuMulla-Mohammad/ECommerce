@@ -1,6 +1,8 @@
 
 using ECommerce.API.Data;
+using ECommerce.API.Models;
 using ECommerce.API.Services;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Scalar.AspNetCore;
 
@@ -22,6 +24,13 @@ namespace ECommerce.API
                 options.UseSqlServer(builder.Configuration.GetConnectionString("defaultConnection")));
             builder.Services.AddScoped<ICategoryService, CategoryService>();
             builder.Services.AddScoped<IBrandService,BrandService>();
+            builder.Services.AddScoped<IProductService, ProductService>();
+            builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
+            {
+                options.User.RequireUniqueEmail = false;
+            })
+            .AddEntityFrameworkStores<ApplicationDbContext>()//Database context
+            .AddDefaultTokenProviders();
             var app = builder.Build();
 
             // Configure the HTTP request pipeline.

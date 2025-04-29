@@ -1,14 +1,12 @@
 ﻿using ECommerce.API.Models;
+using ECommerce.API.Services.IService;
 using System.Linq.Expressions;
 
 namespace ECommerce.API.Services
 {
-    public interface IBrandService
+    public interface IBrandService:IService<Brand>
     {
-        IEnumerable<Brand> GetAll();
-        Brand? Get(Expression<Func<Brand,bool>>expression);
-        Brand Add(Brand brand);
-        bool Edit(int id, Brand brand);
-        bool Remove(int id);
+        Task<bool> EditAsync(int id, Brand brand, CancellationToken cancellationToken = default);
+        Task<bool> UpdateToggleAsync(int id, CancellationToken cancellationToken = default);
     }
 }

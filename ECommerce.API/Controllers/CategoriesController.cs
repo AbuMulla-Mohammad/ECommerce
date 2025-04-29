@@ -4,15 +4,18 @@ using ECommerce.API.DTOs.Responses;
 using ECommerce.API.Models;
 using ECommerce.API.Services;
 using Mapster;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Threading.Tasks;
 
 namespace ECommerce.API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    //[Authorize]//this will make the controller to be protected and only authenticated users can access it
     public class CategoriesController(ICategoryService categoryService) : ControllerBase
     {
         private readonly ICategoryService _categoryService= categoryService;
@@ -25,11 +28,11 @@ namespace ECommerce.API.Controllers
         //}
         //using the primary constructer
         [HttpGet("")]
-        public IActionResult GetAll()
+        public async Task<IActionResult> GetAll()
         {
             try
             {
-                var categories = _categoryService.GetAll();
+                var categories = await _categoryService.GetAsync();
                 return Ok(categories.Adapt<IEnumerable<CategoryResponse>>());
             }
             catch (Exception ex)
@@ -38,7 +41,7 @@ namespace ECommerce.API.Controllers
             }
         }
         [HttpGet("{id}")]
-        public IActionResult GetById([FromRoute]int id)
+        public async Task<IActionResult> GetById([FromRoute]int id)
         {
             
             try
@@ -47,7 +50,7 @@ namespace ECommerce.API.Controllers
                 {
                     return BadRequest("invalid ID");
                 }
-                var category = _categoryService.Get(c=>c.Id==id);
+                var category = await _categoryService.GetOneAsync(c=>c.Id==id);
                 return category == null ? NotFound() : Ok(category.Adapt<CategoryResponse>());
 
             }
@@ -58,23 +61,38 @@ namespace ECommerce.API.Controllers
 
         }
         [HttpPost("")]
-        public IActionResult Create([FromBody] CategoryRequest category)
+        //[Authorize]//this will make the Action to be protected and only authenticated users can access it
+        public async Task<IActionResult> Create([FromBody] CategoryRequest category, CancellationToken cancellationToken)
         {
-           var createdCategory = _categoryService.Add(category.Adapt<Category>());
-            //return Created($"https://localhost:7262/api/Categories/{category.Id}",category);
-            //return Created($"{Request.Scheme}://{Request.Host}/api/Categories/{category.Id}", category);
-            //this better
-            return CreatedAtAction(nameof(GetById), new { createdCategory.Id}, createdCategory);
+            try
+            {
+                var createdCategory = await _categoryService.AddAsync(category.Adapt<Category>(), cancellationToken);
+                //return Created($"https://localhost:7262/api/Categories/{category.Id}",category);
+                //return Created($"{Request.Scheme}://{Request.Host}/api/Categories/{category.Id}", category);
+                //this better
+                return CreatedAtAction(nameof(GetById), new { createdCategory.Id }, createdCategory);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
         }
         [HttpDelete("{id}")]
-        public IActionResult DeleteById([FromRoute]int id)
+        public async Task<IActionResult> DeleteById([FromRoute] int id, CancellationToken cancellationToken)
         {
-            var deletedCategory = _categoryService.Remove(id);
-            if (deletedCategory == false) return NotFound();
-            return NoContent();
+            try
+            {
+                var deletedCategory = await _categoryService.RemoveAsync(id, cancellationToken);
+                if (deletedCategory == false) return NotFound();
+                return NoContent();
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
         }
         [HttpPut("{id}")]
-        public IActionResult Update([FromRoute] int id, [FromBody] CategoryRequest category)
+        public async Task<IActionResult> Update([FromRoute] int id, [FromBody] CategoryRequest category,CancellationToken cancellationToken)
         {
             try
             {
@@ -83,7 +101,7 @@ namespace ECommerce.API.Controllers
                     return BadRequest("Invalid ID");
                 }
                 //var categoryInDb = _context.Categories.Find(id);//track the object
-                var categoryInDb = _categoryService.Edit(id, category.Adapt<Category>());
+                var categoryInDb = await _categoryService.EditAsync(id, category.Adapt<Category>(), cancellationToken);
                 if (!categoryInDb)
                 {
                     return NotFound();

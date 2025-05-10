@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.AspNetCore.Mvc;
 using System.Threading.Tasks;
 
@@ -16,11 +17,16 @@ namespace ECommerce.API.Controllers
     {
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
+        private readonly IEmailSender _emailSender;
 
-        public AccountController(UserManager<ApplicationUser> userManager, SignInManager<ApplicationUser> signInManager)
+        public AccountController(UserManager<ApplicationUser> userManager,
+            SignInManager<ApplicationUser> signInManager,
+            IEmailSender emailSender
+            )
         {
-            _userManager = userManager;
-            _signInManager = signInManager;
+            this._userManager = userManager;
+            this._signInManager = signInManager;
+            this._emailSender = emailSender;
         }
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] RegisterRequest registerRequest)
@@ -32,6 +38,7 @@ namespace ECommerce.API.Controllers
                 var result = await _userManager.CreateAsync(applicationUser, registerRequest.Password);
                 if (result.Succeeded)
                 {
+                    await _emailSender.SendEmailAsync(applicationUser.Email, "Welcome to E-Shopper", $"<h1>Thank you {applicationUser.FirstName} for registering with us.</h1>");
                     return NoContent();
                 }
                 return BadRequest(result.Errors);

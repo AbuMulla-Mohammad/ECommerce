@@ -4,6 +4,7 @@ using ECommerce.API.Data;
 using ECommerce.API.Models;
 using ECommerce.API.Services;
 using ECommerce.API.Utility;
+using ECommerce.API.Utility.DBInitializer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.EntityFrameworkCore;
@@ -46,6 +47,7 @@ namespace ECommerce.API
             })
             .AddEntityFrameworkStores<ApplicationDbContext>()//Database context
             .AddDefaultTokenProviders();
+            builder.Services.AddScoped<IDBInitializer,DBInitializer>();
             var app = builder.Build();
 
             // Configure the HTTP request pipeline.
@@ -61,7 +63,10 @@ namespace ECommerce.API
 
 
             app.MapControllers();
-
+            //this will create a scope for the application and then get the service from the scope then 
+            var scope = app.Services.CreateScope();
+            var service=scope.ServiceProvider.GetService<IDBInitializer>();
+             service.Initialize();
             app.Run();
         }
     }

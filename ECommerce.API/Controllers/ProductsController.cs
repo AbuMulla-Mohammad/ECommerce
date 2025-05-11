@@ -3,7 +3,9 @@ using ECommerce.API.DTOs.Requests;
 using ECommerce.API.DTOs.Responses;
 using ECommerce.API.Models;
 using ECommerce.API.Services;
+using ECommerce.API.Utility;
 using Mapster;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using System.Threading.Tasks;
@@ -12,11 +14,13 @@ namespace ECommerce.API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize(Roles = $"{StaticData.SuperAdmin},{StaticData.Admin},{StaticData.Company}")]
     public class ProductsController(IProductService productService) : ControllerBase
     {
         private readonly IProductService _productService=productService;
 
         [HttpGet("")]
+        [AllowAnonymous]// this is to allow anonymous users to access this endpoint 
         public IActionResult GetAll([FromQuery] string? query, [FromQuery] int page, [FromQuery] int limit = 10)
         {
             try
@@ -34,6 +38,7 @@ namespace ECommerce.API.Controllers
             }
         }
         [HttpGet("{id}")]
+        [AllowAnonymous]
         public async Task<IActionResult> GetById([FromRoute] int id)
         {
             try

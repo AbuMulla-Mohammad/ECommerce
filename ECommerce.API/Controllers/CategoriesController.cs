@@ -3,6 +3,7 @@ using ECommerce.API.DTOs.Requests;
 using ECommerce.API.DTOs.Responses;
 using ECommerce.API.Models;
 using ECommerce.API.Services;
+using ECommerce.API.Utility;
 using Mapster;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -15,7 +16,7 @@ namespace ECommerce.API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    //[Authorize]//this will make the controller to be protected and only authenticated users can access it
+    
     public class CategoriesController(ICategoryService categoryService) : ControllerBase
     {
         private readonly ICategoryService _categoryService= categoryService;
@@ -61,7 +62,7 @@ namespace ECommerce.API.Controllers
 
         }
         [HttpPost("")]
-        //[Authorize]//this will make the Action to be protected and only authenticated users can access it
+        [Authorize(Roles = $"{StaticData.SuperAdmin},{StaticData.Admin},{StaticData.Company}")]//this will make the controller to be protected and only authenticated users can access it
         public async Task<IActionResult> Create([FromBody] CategoryRequest category, CancellationToken cancellationToken)
         {
             try
@@ -78,6 +79,7 @@ namespace ECommerce.API.Controllers
             }
         }
         [HttpDelete("{id}")]
+        [Authorize(Roles = $"{StaticData.SuperAdmin},{StaticData.Admin},{StaticData.Company}")]
         public async Task<IActionResult> DeleteById([FromRoute] int id, CancellationToken cancellationToken)
         {
             try
@@ -92,6 +94,7 @@ namespace ECommerce.API.Controllers
             }
         }
         [HttpPut("{id}")]
+        [Authorize(Roles = $"{StaticData.SuperAdmin},{StaticData.Admin},{StaticData.Company}")]
         public async Task<IActionResult> Update([FromRoute] int id, [FromBody] CategoryRequest category,CancellationToken cancellationToken)
         {
             try

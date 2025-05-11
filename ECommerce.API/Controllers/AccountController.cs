@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.IdentityModel.Tokens;
 using System.Threading.Tasks;
 
 namespace ECommerce.API.Controllers
@@ -18,15 +19,18 @@ namespace ECommerce.API.Controllers
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
         private readonly IEmailSender _emailSender;
+        private readonly RoleManager<IdentityRole> _roleManager;
 
         public AccountController(UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
-            IEmailSender emailSender
+            IEmailSender emailSender,
+            RoleManager<IdentityRole> roleManager
             )
         {
             this._userManager = userManager;
             this._signInManager = signInManager;
             this._emailSender = emailSender;
+            this._roleManager = roleManager;
         }
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] RegisterRequest registerRequest)
@@ -38,6 +42,15 @@ namespace ECommerce.API.Controllers
                 var result = await _userManager.CreateAsync(applicationUser, registerRequest.Password);
                 if (result.Succeeded)
                 {
+                    if (_roleManager.Roles.IsNullOrEmpty())//on first register of my application
+                    {
+                        //IdentityRole role = new IdentityRole("SuperAdmin"); = IdentityRole role = new ("SuperAdmin")
+                        // await _roleManager.CreateAsync(new IdentityRole("SuperAdmin")); = await _roleManager.CreateAsync(role); = await _roleManager.CreateAsync(new ("SuperAdmin"));
+                        await _roleManager.CreateAsync(new ("SuperAdmin"));
+                        await _roleManager.CreateAsync(new("Admin"));
+                        await _roleManager.CreateAsync(new("Customer"));
+                        await _roleManager.CreateAsync(new("Company"));
+                    }
                     await _emailSender.SendEmailAsync(applicationUser.Email, "Welcome to E-Shopper", $"<h1>Thank you {applicationUser.FirstName} for registering with us.</h1>");
                     return NoContent();
                 }
@@ -71,6 +84,7 @@ namespace ECommerce.API.Controllers
             }
         }
         [HttpGet("logout")]
+        [Authorize]
         public async Task<IActionResult> Logout()
         {
             try

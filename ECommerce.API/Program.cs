@@ -48,6 +48,7 @@ namespace ECommerce.API
             .AddEntityFrameworkStores<ApplicationDbContext>()//Database context
             .AddDefaultTokenProviders();
             builder.Services.AddScoped<IDBInitializer,DBInitializer>();
+            builder.Services.AddScoped<IUserService, UserService>();
             var app = builder.Build();
 
             // Configure the HTTP request pipeline.

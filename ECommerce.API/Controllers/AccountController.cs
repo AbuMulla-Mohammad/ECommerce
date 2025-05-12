@@ -1,5 +1,6 @@
 ﻿using ECommerce.API.DTOs.Requests;
 using ECommerce.API.Models;
+using ECommerce.API.Utility;
 using Mapster;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -42,16 +43,8 @@ namespace ECommerce.API.Controllers
                 var result = await _userManager.CreateAsync(applicationUser, registerRequest.Password);
                 if (result.Succeeded)
                 {
-                    if (_roleManager.Roles.IsNullOrEmpty())//on first register of my application
-                    {
-                        //IdentityRole role = new IdentityRole("SuperAdmin"); = IdentityRole role = new ("SuperAdmin")
-                        // await _roleManager.CreateAsync(new IdentityRole("SuperAdmin")); = await _roleManager.CreateAsync(role); = await _roleManager.CreateAsync(new ("SuperAdmin"));
-                        await _roleManager.CreateAsync(new ("SuperAdmin"));
-                        await _roleManager.CreateAsync(new("Admin"));
-                        await _roleManager.CreateAsync(new("Customer"));
-                        await _roleManager.CreateAsync(new("Company"));
-                    }
                     await _emailSender.SendEmailAsync(applicationUser.Email, "Welcome to E-Shopper", $"<h1>Thank you {applicationUser.FirstName} for registering with us.</h1>");
+                    await _userManager.AddToRoleAsync(applicationUser, StaticData.Customer);
                     return NoContent();
                 }
                 return BadRequest(result.Errors);

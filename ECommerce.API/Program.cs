@@ -5,10 +5,13 @@ using ECommerce.API.Models;
 using ECommerce.API.Services;
 using ECommerce.API.Utility;
 using ECommerce.API.Utility.DBInitializer;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using Scalar.AspNetCore;
+using System.Text;
 
 namespace ECommerce.API
 {
@@ -49,6 +52,23 @@ namespace ECommerce.API
             .AddDefaultTokenProviders();
             builder.Services.AddScoped<IDBInitializer,DBInitializer>();
             builder.Services.AddScoped<IUserService, UserService>();
+
+            builder.Services.AddAuthentication(options =>
+            {
+                options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;//"Use JWT bearer tokens when you need to authenticate a user."
+                options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;//This sets the default scheme to challenge unauthorized users (e.g., when a user tries to access a protected endpoint but isn’t authenticated).
+            }).AddJwtBearer(options =>
+            {
+                options.TokenValidationParameters = new()
+                {
+                    ValidateIssuer = false,
+                    ValidateAudience = false,
+                    ValidateLifetime = true,//this will validate the lifetime of the token
+                    ValidateIssuerSigningKey = true,//this will validate the signing key of the token
+                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(Environment.GetEnvironmentVariable(Environment.GetEnvironmentVariable("JWT_SECRET"))))// this will make sure that the token is signed with the same key that is used to sign the token
+                };
+            });
+
             var app = builder.Build();
 
             // Configure the HTTP request pipeline.
@@ -60,6 +80,7 @@ namespace ECommerce.API
 
             app.UseHttpsRedirection();
             app.UseCors(MyAllowSpecificOrigins);
+            app.UseAuthentication();
             app.UseAuthorization();
 
 

@@ -31,7 +31,7 @@ namespace ECommerce.API.Utility.DBInitializer
             {
                 throw new Exception("Database initialization failed", ex);
             }
-            if (_roleManager.Roles.IsNullOrEmpty())//on first register of my application
+            if (_roleManager.Roles is null)//on first register of my application
             {
                 await _roleManager.CreateAsync(new(StaticData.SuperAdmin));
                 await _roleManager.CreateAsync(new(StaticData.Admin));

@@ -9,6 +9,9 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using System.Text;
 using System.Threading.Tasks;
 
 namespace ECommerce.API.Controllers
@@ -65,8 +68,36 @@ namespace ECommerce.API.Controllers
                     var result = await _userManager.CheckPasswordAsync(applicationUser, loginRequest.Password);
                     if (result)
                     {
-                        await _signInManager.SignInAsync(applicationUser, loginRequest.RememberMe);
-                        return Ok("Login successful");
+                        // Create claims for the user
+                        List<Claim> claims = new();
+                        claims.Add(new Claim(ClaimTypes.NameIdentifier, applicationUser.Id));
+                        claims.Add(new Claim(ClaimTypes.Email, applicationUser.Email));
+                        claims.Add(new Claim(ClaimTypes.Name, applicationUser.UserName));
+                        var userRoles= await _userManager.GetRolesAsync(applicationUser);
+                        if(userRoles.Count() > 0)
+                        {
+                            foreach (var role in userRoles)
+                            {
+                                claims.Add(new Claim(ClaimTypes.Role, role));
+                            }
+                        }
+                        // Create a security key for signing the token
+                        var secretKey = Environment.GetEnvironmentVariable("JWT_SECRET");
+                        if (string.IsNullOrWhiteSpace(secretKey))
+                        {
+                            throw new InvalidOperationException("JWT_SECRET environment variable is not set.");
+                        }
+                        SymmetricSecurityKey key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey));// 
+                        SigningCredentials signingCredentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+                        // Generate JWT token here
+                       var jwtToken= new JwtSecurityToken(
+                            claims: claims,// token payload
+                            expires: DateTime.Now.AddMinutes(30),// token expiration time set to 30 minutes
+                            signingCredentials: signingCredentials// signing credentials
+                            );
+                        // Create the token handler 
+                        string token = new JwtSecurityTokenHandler().WriteToken(jwtToken);// token string
+                        return Ok(new { token});
                     }
                 }
                 return Unauthorized("Invalid Email or Password");

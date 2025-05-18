@@ -38,5 +38,23 @@ namespace ECommerce.API.Services
             }
             return false;
         }
+        public async Task<bool?> LockUnlock(string userId)
+        {
+            var user =await _userManager.FindByIdAsync(userId);
+            if (user is null) return null;
+            var isLockedNow=user.LockoutEnabled && user.LockoutEnd > DateTime.Now;
+            if (isLockedNow)
+            {
+                user.LockoutEnabled = false;
+                user.LockoutEnd = null;
+            }
+            else
+            {
+                user.LockoutEnabled = true;
+                user.LockoutEnd = DateTime.Now.AddYears(1000);
+            }
+            await _userManager.UpdateAsync(user); //save changes
+            return !isLockedNow;
+        }
     }
 }

@@ -64,5 +64,22 @@ namespace ECommerce.API.Controllers
                 return BadRequest(new { message = ex.Message });
             }
         }
+        [HttpPatch("LockUnlock/{userId}")]
+        public async Task<IActionResult> LockUnlock(string userId)
+        {
+            try
+            {
+                var result = await _userService.LockUnlock(userId);
+                if (result == null)
+                {
+                    return NotFound(new { message = "User not found" });
+                }
+                return Ok(new { message = result == true ? "User is locked" : "User is unlocked" });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
     }
 }

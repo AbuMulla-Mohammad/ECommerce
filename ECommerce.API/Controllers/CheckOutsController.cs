@@ -1,4 +1,5 @@
-﻿using ECommerce.API.Services;
+﻿using ECommerce.API.DTOs.Requests;
+using ECommerce.API.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -20,7 +21,7 @@ namespace ECommerce.API.Controllers
             this._checkOutService = checkOutService;
         }
         [HttpGet("")]
-        public async Task<IActionResult> Pay(CancellationToken cancellationToken)
+        public async Task<IActionResult> Pay(CancellationToken cancellationToken, [FromBody] PaymentRequest paymentRequest)
         {
             try
             {
@@ -31,7 +32,11 @@ namespace ECommerce.API.Controllers
                 var cancelUrl = $"{Request.Scheme}://{Request.Host}/api/CheckOuts/Cancel";
                 try
                 {
-                    var session = await _checkOutService.PayAsync(userId, successUrl, cancelUrl, cancellationToken);
+                    var session = await _checkOutService.PayAsync(userId, successUrl, cancelUrl, paymentRequest, cancellationToken);
+                    if (session == null)
+                    {
+                        return Ok(new { message = "Order placed with Cash payment method." });
+                    }
                     return Ok(new { session.Url });
                 }
                 catch (Exception ex)

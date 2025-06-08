@@ -61,6 +61,7 @@ namespace ECommerce.API
             builder.Services.AddScoped<ICheckOutService, CheckOutService>();
             builder.Services.AddSingleton<SessionService>();
             builder.Services.AddScoped<IOrderService, OrderService>();
+            builder.Services.AddScoped<IPasswordResetCodeService, PasswordResetCodeService>();
             builder.Services.AddAuthentication(options =>
             {
                 options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;//"Use JWT bearer tokens when you need to authenticate a user."

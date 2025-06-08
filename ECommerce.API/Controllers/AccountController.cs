@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
+using System.Threading.Tasks;
 
 namespace ECommerce.API.Controllers
 {
@@ -120,6 +121,46 @@ namespace ECommerce.API.Controllers
                 return BadRequest(new { errors = Errors });
             }
             catch (Exception ex) { 
+                return BadRequest(ex.Message);
+            }
+        }
+        [HttpPost("SendResetPasswordCode")]
+        public async Task<IActionResult> SendResetPasswordCode([FromBody] SendResetPasswordCodeRequest sendResetPasswordCodeRequest)
+        {
+            try
+            {
+                var (success, errorMessage) = await _accountService.SendResetPasswordCode(sendResetPasswordCodeRequest.Email);
+                if(success)
+                {
+                    return Ok(new { message="Reset Code sent to your Email successfully "});
+                }
+                else
+                {
+                    return BadRequest(new { message = errorMessage ?? "Failed to send password reset email." });
+                }
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
+        [HttpPost("ResetPassowrd")]
+        public async Task<IActionResult> ResetPassowrd([FromBody] ForgotPasswordRequest forgotPasswordRequest )
+        {
+            try
+            {
+                var(success, errorMessage)= await _accountService.ResetPassword(forgotPasswordRequest.Email, forgotPasswordRequest.Code, forgotPasswordRequest.Password);
+                if (success)
+                {
+                    return Ok("Your Password Reset Successfully");
+                }
+                else
+                {
+                    return BadRequest(new { message = errorMessage });
+                }
+            }
+            catch (Exception ex)
+            {
                 return BadRequest(ex.Message);
             }
         }

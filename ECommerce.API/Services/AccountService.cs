@@ -17,12 +17,14 @@ namespace ECommerce.API.Services
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly IEmailSender _emailSender;
         private readonly SignInManager<ApplicationUser> _signInManager;
+        private readonly IPasswordResetCodeService _passwordResetCodeService;
 
-        public AccountService(UserManager<ApplicationUser>userManager, IEmailSender emailSender,SignInManager<ApplicationUser>signInManager)
+        public AccountService(UserManager<ApplicationUser>userManager, IEmailSender emailSender,SignInManager<ApplicationUser>signInManager,IPasswordResetCodeService passwordResetCodeService)
         {
             this._userManager = userManager;
             this._emailSender = emailSender;
             this._signInManager = signInManager;
+            this._passwordResetCodeService = passwordResetCodeService;
         }
 
         public async Task<(bool success, IEnumerable<IdentityError> errors, string? ErrorMessage)> ChangePasswordAsync(string userId, ChangePasswordRequest changePasswordRequest)
@@ -135,7 +137,71 @@ namespace ECommerce.API.Services
             await _userManager.AddToRoleAsync(applicationUser, StaticData.Customer);
             return result;
         }
+               
+        public async Task<(bool success, string? errorMessage)> SendResetPasswordCode(string email)
+        {
+            var applicationUser =await _userManager.FindByEmailAsync(email);
+            if (applicationUser is not null)
+            {
+                var code = new Random().Next(100000, 999999).ToString();
+                var result = await _passwordResetCodeService.AddAsync(new ()
+                {
+                    Code = code,
+                    ApplicationUserId = applicationUser.Id,
+                    ExpirationDate = DateTime.Now.AddMinutes(30)
+                });
+                if (result is not null)
+                {
+                     await _emailSender.SendEmailAsync(applicationUser.Email, "Reset Password Code",
+                        $"<h1>Hi {applicationUser.FirstName},</h1>" +
+                        $"<p>We received a request to reset your password.</p>" +
+                        $"<h2'>Reset Password Code: {code} </h2>");
+                    return (true, null);
+                }
+                else
+                {
+                    return (false, "Failed to generate password reset code.");
 
-        
+                }
+            }
+            else
+            {
+                return (false, "Invalid Email");
+            }
+        }
+        public async Task<(bool success, string? errorMessage)> ResetPassword(string email, string code, string newPassword)
+        {
+            var appUser=await _userManager.FindByEmailAsync(email);
+            if(appUser is not null)
+            {
+                var resetCode = (await _passwordResetCodeService.GetAsync(e => e.ApplicationUserId == appUser.Id)).OrderByDescending(e => e.ExpirationDate).FirstOrDefault();
+                if (resetCode is not null && resetCode.Code==code && resetCode.ExpirationDate > DateTime.Now)
+                {
+                    var token = await _userManager.GeneratePasswordResetTokenAsync(appUser);
+                    var result=await _userManager.ResetPasswordAsync(appUser, token, newPassword);
+                    if(result.Succeeded)
+                    {
+                        await _emailSender.SendEmailAsync(appUser.Email, "Reset Password Successfully",
+                        $"<h1>Hi {appUser.FirstName},</h1>" +
+                        $"<p>You successfully reset your Password</p>");
+                        await _passwordResetCodeService.RemoveAsync(resetCode.Id); 
+                        return (true, null);
+                    }
+                    else
+                    {
+                        return (false, "Failed to reset password: " + string.Join(", ", result.Errors.Select(e => e.Description)));
+                    }
+                }
+                else
+                {
+                    return (false, "Invalid or expired reset code.");
+                }
+            }
+            else
+            {
+                return (false, "Invalid Email");
+            }
+        }
+
     }
 }

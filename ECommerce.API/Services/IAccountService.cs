@@ -9,6 +9,8 @@ namespace ECommerce.API.Services
         Task<(bool success,string? token,string? errorMessage)> LoginAsync(LoginRequest loginRequest, HttpRequest httpRequest);
         Task<(bool success, IEnumerable<IdentityError> errors, string? ErrorMessage)> ChangePasswordAsync(string userId, ChangePasswordRequest changePasswordRequest);
         Task<(bool Success, IEnumerable<string> Errors, string Message)> ConfirmEmail(string userId,string token);
+        Task<(bool success, string? errorMessage)> SendResetPasswordCode(string email);
+        Task<(bool success, string? errorMessage)> ResetPassword(string email, string code, string newPassword);
 
     }
 }

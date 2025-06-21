@@ -1,7 +1,9 @@
 ﻿using ECommerce.API.DTOs.Requests;
+using ECommerce.API.Models;
 using ECommerce.API.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.AspNetCore.Mvc;
 using Stripe.Checkout;
 using System.Security.Claims;
@@ -15,10 +17,18 @@ namespace ECommerce.API.Controllers
     public class CheckOutsController : ControllerBase
     {
         private readonly ICheckOutService _checkOutService;
+        private readonly IOrderService _orderService;
+        private readonly IEmailSender _emailSender;
+        private readonly ICartService _cartService;
+        private readonly IOrderItemService _orderItemService;
 
-        public CheckOutsController(ICheckOutService checkOutService)
+        public CheckOutsController(ICheckOutService checkOutService,IOrderService orderService,IEmailSender emailSender,ICartService cartService,IOrderItemService orderItemService)
         {
             this._checkOutService = checkOutService;
+            this._orderService = orderService;
+            this._emailSender = emailSender;
+            this._cartService = cartService;
+            this._orderItemService = orderItemService;
         }
         [HttpGet("")]
         public async Task<IActionResult> Pay(CancellationToken cancellationToken, [FromBody] PaymentRequest paymentRequest)
@@ -32,10 +42,10 @@ namespace ECommerce.API.Controllers
                 var cancelUrl = $"{Request.Scheme}://{Request.Host}/api/CheckOuts/Cancel";
                 try
                 {
-                    var session = await _checkOutService.PayAsync(userId, successUrl, cancelUrl, paymentRequest, cancellationToken);
+                    var (session,orderId) = await _checkOutService.PayAsync(userId, successUrl, cancelUrl, paymentRequest, cancellationToken);
                     if (session == null)
                     {
-                        return Ok(new { message = "Order placed with Cash payment method." });
+                        return RedirectToAction(nameof(Success), new { orderId });
                     }
                     return Ok(new { session.Url });
                 }
@@ -73,11 +83,26 @@ namespace ECommerce.API.Controllers
                 return BadRequest(new { message = ex.Message });
             }
         }
-        [HttpGet("Success")]
+        [HttpGet("Success/{orderId}")]
         [AllowAnonymous]
-        public IActionResult Success()
+        public async Task<IActionResult> Success([FromRoute] int orderId)
         {
-            return Ok(new { message = "Payment successful" });
+            try
+            {
+                var (isSuccess, message) = await _checkOutService.SuccessAsync(orderId, CancellationToken.None);
+                if(isSuccess)
+                {
+                    return Ok(new { message = "Payment successful", orderId });
+                }
+                else
+                {
+                    return BadRequest(new { message });
+                }
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
     }
 }

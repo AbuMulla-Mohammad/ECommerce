@@ -16,6 +16,12 @@ namespace ECommerce.API.Services
 
         public async Task<Cart> AddToCartAsync(string UserId, int ProductId, CancellationToken cancellationToken)
         {
+            var product=await _context.Products.FindAsync(ProductId, cancellationToken);
+            if (product == null)
+                throw new Exception("Product not found.");
+
+            if (product.Quantity <= 0)
+                throw new Exception("Product is out of stock.");
             var existingCartItem =await _context.Carts.FirstOrDefaultAsync(cart=> cart.ApplicationUserId== UserId&& cart.ProductId==ProductId);
             if(existingCartItem is not null)
             {
@@ -37,6 +43,13 @@ namespace ECommerce.API.Services
         public async Task<IEnumerable<Cart>> GetCartProducts(string userId, CancellationToken cancellationToken)
         {
             return await GetAsync(expression: (e=>e.ApplicationUserId==userId),includes: [cart=>cart.Product]);
+        }
+        public async Task<bool> RemoveRangeAsync(IEnumerable<Cart>items, CancellationToken cancellationToken = default)
+        {
+           _context.RemoveRange(items);
+            await _context.SaveChangesAsync(cancellationToken);
+            return true;
+
         }
     }
 }

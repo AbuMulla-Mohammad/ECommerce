@@ -9,5 +9,6 @@ namespace ECommerce.API.Services.IService
         Task<T?> GetOneAsync(Expression<Func<T, bool>> expression, Expression<Func<T, object>>?[] includes=null, CancellationToken cancellationToken = default, bool isTracked = true);
         Task<T> AddAsync(T entity, CancellationToken cancellationToken = default);
         Task<bool> RemoveAsync(int id, CancellationToken cancellationToken = default);
+        Task<int> CommitAsync(CancellationToken cancellationToken = default);
     }
 }

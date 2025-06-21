@@ -8,5 +8,6 @@ namespace ECommerce.API.Services
     {
         Task<Cart> AddToCartAsync(string userId, int ProductId,CancellationToken cancellationToken);
         Task<IEnumerable<Cart>>GetCartProducts(string userId, CancellationToken cancellationToken);
+        Task<bool> RemoveRangeAsync(IEnumerable<Cart> items, CancellationToken cancellationToken = default);
     }
 }
